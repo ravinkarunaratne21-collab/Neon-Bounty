@@ -1,5 +1,7 @@
 type SoundName = 'shoot' | 'jump' | 'hit' | 'hurt' | 'pickup' | 'boss' | 'start' | 'sand';
 
+const MUSIC_URL = 'https://raw.githubusercontent.com/ravinkarunaratne21-collab/Neon-Bounty/main/ikoliks_aj-cyberpunk-cyberpunk-music-614562.mp3';
+
 const frequency = (midi: number) => 440 * Math.pow(2, (midi - 69) / 12);
 
 const mulberry32 = (seed: number) => {
@@ -58,6 +60,7 @@ export class ChiptuneAudio {
   private level = 0;
   private noiseBuffer: AudioBuffer | null = null;
   private melody: number[] = makeMelody(0, TRACKS[0].root);
+  private backgroundTrack: HTMLAudioElement | null = null;
   enabled = true;
 
   private ensureContext() {
@@ -68,7 +71,7 @@ export class ChiptuneAudio {
       this.master.gain.value = this.enabled ? 0.35 : 0;
       this.master.connect(this.context.destination);
       this.musicBus = this.context.createGain();
-      this.musicBus.gain.value = 0.8;
+      this.musicBus.gain.value = 0;
       this.musicBus.connect(this.master);
 
       const length = Math.floor(this.context.sampleRate * 0.3);
@@ -78,6 +81,25 @@ export class ChiptuneAudio {
     } catch {
       this.context = null;
     }
+  }
+
+  private ensureTrack() {
+    if (this.backgroundTrack) return;
+    const audio = new Audio(MUSIC_URL);
+    audio.loop = true;
+    audio.preload = 'auto';
+    audio.volume = 0.3;
+    this.backgroundTrack = audio;
+  }
+
+  private startBackgroundTrack() {
+    this.ensureTrack();
+    if (!this.backgroundTrack) return;
+    this.backgroundTrack.volume = this.enabled ? 0.28 : 0;
+    this.backgroundTrack.currentTime = 0;
+    void this.backgroundTrack.play().catch(() => {
+      // Audio autoplay can be blocked until the user interacts with the page.
+    });
   }
 
   private tone(midi: number, time: number, duration: number, volume: number, wave: OscillatorType, bus: AudioNode | null, detune = 0, slide = 0) {
@@ -123,34 +145,28 @@ export class ChiptuneAudio {
       const bar = Math.floor(this.step / 16) % 4;
       const chordRoot = track.root + PROG[bar];
 
-      // 808-style kick on the quarters, offbeat ghost on the 8th sometimes.
       if (beat % 4 === 0) this.tone(36, this.nextNoteTime, 0.13, 0.5, 'sine', this.musicBus, 0, -24);
       if (beat === 7 || beat === 15) this.tone(36, this.nextNoteTime, 0.07, 0.2, 'sine', this.musicBus, 0, -20);
 
-      // Snare and closed hats.
       if (beat === 4 || beat === 12) this.noise(this.nextNoteTime, 0.16, 0.28, 'bandpass', 1800);
       this.noise(this.nextNoteTime, beat % 2 === 0 ? 0.045 : 0.028, beat % 2 === 0 ? 0.05 : 0.036, 'highpass', 6500);
       if (beat === 14) this.noise(this.nextNoteTime, 0.22, 0.06, 'highpass', 4500);
 
-      // Driving 16th bass in the dark register.
       const bassPattern = [0, 0, 12, 0, 0, 10, 12, 7];
       const bassNote = chordRoot - 12 + bassPattern[beat] + (beat % 8 === 6 ? 12 : 0);
       this.tone(bassNote, this.nextNoteTime, sixteenth * 0.9, 0.26, 'sawtooth', this.musicBus, 6);
       this.tone(bassNote - 12, this.nextNoteTime, sixteenth * 0.9, 0.12, 'square', this.musicBus, 0);
 
-      // Slow detuned pad on the bar start.
       if (beat === 0) {
         this.tone(chordRoot + 7, this.nextNoteTime, sixteenth * 15, 0.08, 'sawtooth', this.musicBus, -8);
         this.tone(chordRoot + 12, this.nextNoteTime, sixteenth * 15, 0.072, 'sawtooth', this.musicBus, 8);
       }
 
-      // The lead line.
       const note = this.melody[this.step % 128];
       if (note > 0 && (track.drive > 0.6 || this.step % 2 === 0)) {
         this.tone(note, this.nextNoteTime, sixteenth * 1.4, 0.18, 'square', this.musicBus);
         this.tone(note, this.nextNoteTime, sixteenth * 1.4, 0.10, 'square', this.musicBus, 12);
       }
-      // Sparkling high arp on the second half of the bar.
       if (track.drive > 0.62 && beat >= 8 && beat % 2 === 0) {
         const arp = chordRoot + 24 + MINOR[(bar * 3 + beat) % 8];
         this.tone(arp, this.nextNoteTime, sixteenth * 0.6, 0.08, 'square', this.musicBus);
@@ -168,9 +184,10 @@ export class ChiptuneAudio {
     this.setLevel(level);
     if (this.timer !== null) window.clearInterval(this.timer);
     this.nextNoteTime = this.context.currentTime + 0.06;
-    this.musicBus?.gain.setTargetAtTime(0.8, this.context.currentTime, 0.04);
+    this.musicBus?.gain.setTargetAtTime(0, this.context.currentTime, 0.04);
     this.timer = window.setInterval(this.schedule, 25);
     this.schedule();
+    this.startBackgroundTrack();
   }
 
   setLevel(level: number) {
@@ -181,10 +198,18 @@ export class ChiptuneAudio {
 
   pause() {
     if (this.musicBus && this.context) this.musicBus.gain.setTargetAtTime(0, this.context.currentTime, 0.04);
+    if (this.backgroundTrack) {
+      this.backgroundTrack.pause();
+    }
   }
 
   resume() {
-    if (this.musicBus && this.context) this.musicBus.gain.setTargetAtTime(0.8, this.context.currentTime, 0.04);
+    if (this.musicBus && this.context) this.musicBus.gain.setTargetAtTime(0, this.context.currentTime, 0.04);
+    if (this.backgroundTrack && this.enabled) {
+      void this.backgroundTrack.play().catch(() => {
+        // Autoplay may still be blocked until user interaction.
+      });
+    }
     void this.context?.resume();
   }
 
@@ -192,11 +217,23 @@ export class ChiptuneAudio {
     if (this.timer !== null) window.clearInterval(this.timer);
     this.timer = null;
     this.pause();
+    if (this.backgroundTrack) {
+      this.backgroundTrack.pause();
+      this.backgroundTrack.currentTime = 0;
+    }
   }
 
   toggle() {
     this.enabled = !this.enabled;
     if (this.master && this.context) this.master.gain.setTargetAtTime(this.enabled ? 0.35 : 0, this.context.currentTime, 0.025);
+    if (this.backgroundTrack) {
+      this.backgroundTrack.volume = this.enabled ? 0.28 : 0;
+      if (this.enabled) {
+        void this.backgroundTrack.play().catch(() => {});
+      } else {
+        this.backgroundTrack.pause();
+      }
+    }
     return this.enabled;
   }
 
@@ -239,6 +276,10 @@ export class ChiptuneAudio {
 
   destroy() {
     this.stop();
+    if (this.backgroundTrack) {
+      this.backgroundTrack.pause();
+      this.backgroundTrack.src = '';
+    }
     void this.context?.close();
     this.context = null;
   }
