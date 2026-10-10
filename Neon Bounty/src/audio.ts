@@ -65,10 +65,10 @@ export class ChiptuneAudio {
     try {
       this.context = new AudioContext();
       this.master = this.context.createGain();
-      this.master.gain.value = this.enabled ? 0.24 : 0;
+      this.master.gain.value = this.enabled ? 0.35 : 0;
       this.master.connect(this.context.destination);
       this.musicBus = this.context.createGain();
-      this.musicBus.gain.value = 0.5;
+      this.musicBus.gain.value = 0.8;
       this.musicBus.connect(this.master);
 
       const length = Math.floor(this.context.sampleRate * 0.3);
@@ -140,20 +140,20 @@ export class ChiptuneAudio {
 
       // Slow detuned pad on the bar start.
       if (beat === 0) {
-        this.tone(chordRoot + 7, this.nextNoteTime, sixteenth * 15, 0.05, 'sawtooth', this.musicBus, -8);
-        this.tone(chordRoot + 12, this.nextNoteTime, sixteenth * 15, 0.045, 'sawtooth', this.musicBus, 8);
+        this.tone(chordRoot + 7, this.nextNoteTime, sixteenth * 15, 0.08, 'sawtooth', this.musicBus, -8);
+        this.tone(chordRoot + 12, this.nextNoteTime, sixteenth * 15, 0.072, 'sawtooth', this.musicBus, 8);
       }
 
       // The lead line.
       const note = this.melody[this.step % 128];
       if (note > 0 && (track.drive > 0.6 || this.step % 2 === 0)) {
-        this.tone(note, this.nextNoteTime, sixteenth * 1.4, 0.13, 'square', this.musicBus);
-        this.tone(note, this.nextNoteTime, sixteenth * 1.4, 0.07, 'square', this.musicBus, 12);
+        this.tone(note, this.nextNoteTime, sixteenth * 1.4, 0.18, 'square', this.musicBus);
+        this.tone(note, this.nextNoteTime, sixteenth * 1.4, 0.10, 'square', this.musicBus, 12);
       }
       // Sparkling high arp on the second half of the bar.
       if (track.drive > 0.62 && beat >= 8 && beat % 2 === 0) {
         const arp = chordRoot + 24 + MINOR[(bar * 3 + beat) % 8];
-        this.tone(arp, this.nextNoteTime, sixteenth * 0.6, 0.05, 'square', this.musicBus);
+        this.tone(arp, this.nextNoteTime, sixteenth * 0.6, 0.08, 'square', this.musicBus);
       }
 
       this.nextNoteTime += sixteenth;
@@ -168,7 +168,7 @@ export class ChiptuneAudio {
     this.setLevel(level);
     if (this.timer !== null) window.clearInterval(this.timer);
     this.nextNoteTime = this.context.currentTime + 0.06;
-    this.musicBus?.gain.setTargetAtTime(0.5, this.context.currentTime, 0.04);
+    this.musicBus?.gain.setTargetAtTime(0.8, this.context.currentTime, 0.04);
     this.timer = window.setInterval(this.schedule, 25);
     this.schedule();
   }
@@ -184,7 +184,7 @@ export class ChiptuneAudio {
   }
 
   resume() {
-    if (this.musicBus && this.context) this.musicBus.gain.setTargetAtTime(0.5, this.context.currentTime, 0.04);
+    if (this.musicBus && this.context) this.musicBus.gain.setTargetAtTime(0.8, this.context.currentTime, 0.04);
     void this.context?.resume();
   }
 
@@ -196,7 +196,7 @@ export class ChiptuneAudio {
 
   toggle() {
     this.enabled = !this.enabled;
-    if (this.master && this.context) this.master.gain.setTargetAtTime(this.enabled ? 0.24 : 0, this.context.currentTime, 0.025);
+    if (this.master && this.context) this.master.gain.setTargetAtTime(this.enabled ? 0.35 : 0, this.context.currentTime, 0.025);
     return this.enabled;
   }
 
