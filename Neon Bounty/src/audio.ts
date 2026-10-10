@@ -1,6 +1,6 @@
 type SoundName = 'shoot' | 'jump' | 'hit' | 'hurt' | 'pickup' | 'boss' | 'start' | 'sand';
 
-const MUSIC_URL = 'https://raw.githubusercontent.com/ravinkarunaratne21-collab/Neon-Bounty/main/Neon%20Bounty/public/ikoliks_aj-cyberpunk-cyberpunk-music-614562.mp3';
+const MUSIC_URL = '/Neon-Bounty/ikoliks_aj-cyberpunk-cyberpunk-music-614562.mp3';
 
 const frequency = (midi: number) => 440 * Math.pow(2, (midi - 69) / 12);
 
