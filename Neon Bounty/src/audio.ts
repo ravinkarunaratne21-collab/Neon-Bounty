@@ -90,14 +90,14 @@ export class ChiptuneAudio {
     const audio = new Audio(MUSIC_URL);
     audio.loop = true;
     audio.preload = 'auto';
-    audio.volume = 0.3;
+    audio.volume = 0.15;
     this.backgroundTrack = audio;
   }
 
   private startBackgroundTrack() {
     this.ensureTrack();
     if (!this.backgroundTrack) return;
-    this.backgroundTrack.volume = this.enabled ? 0.28 : 0;
+    this.backgroundTrack.volume = this.enabled ? 0.15 : 0;
     this.backgroundTrack.currentTime = 0;
     void this.backgroundTrack.play().catch(() => {
       // Audio autoplay can be blocked until the user interacts with the page.
@@ -229,7 +229,7 @@ export class ChiptuneAudio {
     this.enabled = !this.enabled;
     if (this.master && this.context) this.master.gain.setTargetAtTime(this.enabled ? 0.35 : 0, this.context.currentTime, 0.025);
     if (this.backgroundTrack) {
-      this.backgroundTrack.volume = this.enabled ? 0.28 : 0;
+      this.backgroundTrack.volume = this.enabled ? 0.15 : 0;
       if (this.enabled) {
         void this.backgroundTrack.play().catch(() => {});
       } else {
